@@ -9,18 +9,47 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - name: Extract Project Files
-        run: |
-          unzip iosevka-charon.zip
-          mv iosevka-charon/* . 2>/dev/null || mv iosevka-charon-main/* . 2>/dev/null || true
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v25
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          node-version: '20'
 
-      - name: Compile Font via Nix
-        env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+      - name: Install Build Dependencies
         run: |
-          nix develop --command npm run build -- ttf::iosevka-charon-custom
+          sudo apt-get update
+          sudo apt-get install -y ttfautohint
+          npm install -g @be5invis/iosevka-tools
+
+      - name: Create Custom Build Configuration
+        run: |
+          cat << 'EOF' > private-build-plans.toml
+          [buildPlans.iosevka-charon-custom]
+          family = "Iosevka Charon Custom"
+          spacing = "normal"
+          serifs = "sans"
+          noCvSs = true
+          exportGlyphNames = false
+
+          [buildPlans.iosevka-charon-custom.variants.design]
+          two = "straight-neck-serifless"
+          four = "semi-open-serifless"
+          five = "upright-arched-serifless"
+          six = "open-contour"
+          seven = "bend-serifless"
+          nine = "open-contour"
+          zero = "unslashed"
+          capital-z = "straight-serifless"
+          g = "double-storey"
+          brace = "straight"
+          guillemet = "curly"
+          EOF
+
+      - name: Compile Custom Font
+        run: |
+          npx iosevka-tools build ttf::iosevka-charon-custom
+
+      - name: Upload Font Artifacts
+        uses: actions/artifacts-upload@v4
+        with:
+          name: iosevka-charon-custom-font
+          path: dist/
