@@ -1,0 +1,24 @@
+name: Compile Custom Font
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Project Files
+        run: |
+          unzip iosevka-charon.zip
+          mv iosevka-charon/* . 2>/dev/null || mv iosevka-charon-main/* . 2>/dev/null || true
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Compile Font via Nix
+        run: |
+          nix develop --command npm run build -- ttf::iosevka-charon-custom
